@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Простой чат</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="container">
+    <h2>Чат (все видят все)</h2>
+    
+    <ul id="messages"></ul>
+    
+    <form id="form">
+      <input id="input" autocomplete="off" placeholder="Напиши сообщение..." />
+      <button>Отправить</button>
+    </form>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    // Запрос имени
+    let username = prompt("Как тебя зовут?", "Гость");
+    if (!username || username.trim() === "") username = "Гость";
+
+    socket.emit('set username', username);
+
+    const form = document.getElementById('form');
+    const input = document.getElementById('input');
+    const messages = document.getElementById('messages');
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (input.value.trim()) {
+        socket.emit('chat message', input.value.trim());
+        input.value = '';
+      }
+    });
+
+    socket.on('chat message', (data) => {
+      const item = document.createElement('li');
+
+      const isOwn = data.username === username;
+      item.classList.add(isOwn ? 'own' : 'other');
+
+      item.innerHTML = `
+        <span class="time">${data.time || ''}</span>
+        <strong>${data.username}:</strong> ${data.text}
+      `;
+
+      messages.appendChild(item);
+      messages.scrollTop = messages.scrollHeight;
+    });
+  </script>
+</body>
+</html>
