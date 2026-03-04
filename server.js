@@ -1,22 +1,32 @@
 const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
+const path = require('path');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = new Server(server, {
+  cors: {
+    origin: "*", // для теста на Render — разрешает всем подключаться
+    methods: ["GET", "POST"],
+    credentials: true
+  }
+});
 
 app.use(express.static('public'));
+
+// Явно отдаём index.html по корневому пути — это решает "Cannot GET /"
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
 
 const users = {}; // socket.id → username
 
 io.on('connection', (socket) => {
   console.log('Пользователь подключился:', socket.id);
 
-  // Клиент отправил имя
   socket.on('set username', (username) => {
     users[socket.id] = username || 'Аноним';
-    // Системное сообщение о входе
     io.emit('chat message', {
       username: 'Система',
       text: `${users[socket.id]} присоединился к чату`,
@@ -44,7 +54,8 @@ io.on('connection', (socket) => {
   });
 });
 
-const PORT = 3000;
+// Важно: используем process.env.PORT для Render
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Сервер запущен → http://localhost:${PORT}`);
+  console.log(`Сервер запущен на порту ${PORT}`);
 });
